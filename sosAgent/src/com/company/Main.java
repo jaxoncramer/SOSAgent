@@ -38,6 +38,16 @@ public class Main {
                         LOGGER.info("CONTROLLER_MESSAGE " + new Throwable().getStackTrace()[0].getLineNumber());
                         agent.getController().getControllerMessage();
                         break;
+                    case HOST_SIDE_CONNECT:
+                        break;
+                    case AGENT_CONNECTED:
+                        break;
+                    case AGENT_SIDE_CONNECT:
+                        break;
+                    case AGENT_CONNECTED_UUID:
+                        break;
+                    case HOST_CONNECTED:
+                        break;
                     default:
                         LOGGER.warning("Unknown event type " + new Throwable().getStackTrace()[0].getLineNumber());
                 }
