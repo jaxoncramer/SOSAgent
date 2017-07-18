@@ -15,13 +15,11 @@ public class Main {
         //Set LOGGER warning level (info, warning, or severe)
         LOGGER.setLevel(Level.INFO);
 
+        //should only be one instance of common throughout program
         Agent agent = new Agent(common);
 
-        for(int i = 0; i < common.getMAX_AGENT_CONNECTIONS(); i++) {
-            agent.getAgentFDPool().add(common.EMPTY);
-        }
-
-        agent.getController().initControllerListener();
+        //initialize agent
+        agent.initAgent();
 
         while (true) {
             //#####################################//
@@ -39,14 +37,24 @@ public class Main {
                         agent.getController().getControllerMessage();
                         break;
                     case HOST_SIDE_CONNECT:
+                        LOGGER.info("HOST_SIDE_CONNECT " + new Throwable().getStackTrace()[0].getLineNumber());
+                        agent.handleHostConnection();
                         break;
                     case AGENT_CONNECTED:
+                        LOGGER.info("AGENT_CONNECTED " + new Throwable().getStackTrace()[0].getLineNumber());
+                        agent.agentConnected();
                         break;
                     case AGENT_SIDE_CONNECT:
+                        LOGGER.info("AGENT_SIDE_CONNECT " + new Throwable().getStackTrace()[0].getLineNumber());
+                        agent.acceptAgentConnection();
                         break;
                     case AGENT_CONNECTED_UUID:
+                        LOGGER.info("AGENT_CONNECTED_UUID " + new Throwable().getStackTrace()[0].getLineNumber());
+                        agent.confirmClient();
                         break;
                     case HOST_CONNECTED:
+                        LOGGER.info("HOST_CONNECTED " + new Throwable().getStackTrace()[0].getLineNumber());
+                        agent.hostConnected();
                         break;
                     default:
                         LOGGER.warning("Unknown event type " + new Throwable().getStackTrace()[0].getLineNumber());

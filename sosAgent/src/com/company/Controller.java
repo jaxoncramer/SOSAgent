@@ -16,6 +16,8 @@ import org.restlet.resource.ServerResource;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.logging.Logger;
 
 /**
@@ -26,9 +28,10 @@ public class Controller extends ServerResource {
     private Common common = new Common();
     private final static Logger LOGGER = Logger.getLogger(Main.class.getName());
 
+    private Agent agent;
     private Server sock;
     private short port;
-    private ArrayList<TransferRequest> requests = new ArrayList<>();
+    private HashMap<String, TransferRequest> requests = new LinkedHashMap<>();
 
     //GETTERS
     public Server getSock() {
@@ -37,6 +40,14 @@ public class Controller extends ServerResource {
 
     public short getPort() {
         return port;
+    }
+
+    public HashMap<String, TransferRequest> getRequests() {
+        return requests;
+    }
+
+    public Agent getAgent() {
+        return agent;
     }
 
     //SETTERS
@@ -48,12 +59,17 @@ public class Controller extends ServerResource {
         this.port = port;
     }
 
+    public void setAgent(Agent agent) {
+        this.agent = agent;
+    }
+
     //Initialize Controller Restlet Server once at beginning of program
     //server runs the getRestletResource function and handles exactly one request at a time
-    public void initControllerListener() {
+    public void initControllerListener(Agent agent) {
         Server server = new Server(Protocol.HTTP, this.common.getCONTROLLER_MSG_PORT(), getRestletResource());
         setSock(server);
         setPort((short) this.common.getCONTROLLER_MSG_PORT());
+        setAgent(agent);
     }
 
     //starts the Controller Restlet Server
@@ -131,17 +147,33 @@ public class Controller extends ServerResource {
                     transfer.setAllowedConnections((Integer) jsonObject.get("allowedConnections"));
                     transfer.setBufferSize((Integer) jsonObject.get("bufferSize"));
                     transfer.setQueueSize((Integer) jsonObject.get("queueSize"));
-                    printTransferMessage(transfer);
+
+//                    printTransferMessage(transfer);
+
+                    if (processTransferRequest(transfer, transfer.getType())) {
+                        LOGGER.info(transfer.getType() + " with source IP " + transfer.getSourceIP() + " found.");
+                    } else {
+                        LOGGER.info(transfer.getType() + " with source IP " + transfer.getSourceIP() + " not found.");
+                    }
+
                 } else if(transfer.getType().equals("AGENT")) {
                     transfer.setAgentIP((String) jsonObject.get("agentIP"));
                     transfer.setAgentPort((Integer) jsonObject.get("agentPort"));
                     transfer.setAllowedConnections((Integer) jsonObject.get("allowedConnections"));
                     transfer.setBufferSize((Integer) jsonObject.get("bufferSize"));
                     transfer.setQueueSize((Integer) jsonObject.get("queueSize"));
-                    printTransferMessage(transfer);
+
+//                    printTransferMessage(transfer);
+
+                    if (processTransferRequest(transfer, transfer.getType())) {
+                        LOGGER.info(transfer.getType() + " with agent IP " + transfer.getAgentIP() + " found.");
+                    } else {
+                        LOGGER.info(transfer.getType() + " with agent IP " + transfer.getAgentIP() + " not found.");
+                    }
+
                 }
 
-                requests.add(transfer);
+                requests.put(transfer.getAgentIP(), transfer);
             }
 
         } catch (IOException e) {
@@ -160,6 +192,62 @@ public class Controller extends ServerResource {
 
     private void handleDelete(Request request, Response response) {
 
+    }
+
+    //check all available clients for a match to transfer request
+    public boolean processTransferRequest(TransferRequest request, String type) {
+
+        for (Client client : getAgent().getClientHash().values()) {
+
+            if(type.equalsIgnoreCase("CLIENT")) {
+                if(request.getSourceIP().equals(client.getSourceIP())
+                        && request.getSourcePort() == client.getSourcePort()) {
+                    client.setAgentIP(request.getAgentIP());
+                    client.setAllowedConnections(request.getAllowedConnections());
+                    client.setTransferRequest(request);
+                    return true;
+                }
+            }
+            else if(type.equalsIgnoreCase("AGENT")) {
+                if(request.getAgentIP().equals(client.getSourceIP())
+                        && request.getAgentPort() == client.getSourcePort()) {
+                    client.setAgentIP(request.getAgentIP());
+                    client.setAgentPort(request.getAgentPort());
+                    client.setAllowedConnections(request.getAllowedConnections());
+                    client.setTransferRequest(request);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    //Overloaded method: check all available transfer requests for a match to client
+    public boolean processTransferRequest(Client client, String type) {
+
+        for(TransferRequest request : getRequests().values()) {
+
+            if(type.equalsIgnoreCase("CLIENT")) {
+                if(request.getSourceIP().equals(client.getSourceIP())
+                        && request.getSourcePort() == client.getSourcePort()) {
+                    client.setAgentIP(request.getAgentIP());
+                    client.setAllowedConnections(request.getAllowedConnections());
+                    client.setTransferRequest(request);
+                    return true;
+                }
+            }
+            else if(type.equalsIgnoreCase("AGENT")) {
+                if(request.getAgentIP().equals(client.getSourceIP())
+                        && request.getAgentPort() == client.getSourcePort()) {
+                    client.setAgentIP(request.getAgentIP());
+                    client.setAgentPort(request.getAgentPort());
+                    client.setAllowedConnections(request.getAllowedConnections());
+                    client.setTransferRequest(request);
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private void printTransferMessage(TransferRequest transfer) {
